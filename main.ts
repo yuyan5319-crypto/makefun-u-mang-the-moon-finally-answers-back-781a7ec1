@@ -1,23 +1,39 @@
-// The Moon Finally Answers Back — make.fun bounty entry.
-// One line, in the Moon's own voice, written to /output/entry.txt.
+// The Moon Finally Answers Back — entry program.
+// Writes a single original line to <output>/entry.txt.
+// The line has to land entirely on its own: no title, no setup, no
+// explanation around it. It is the whole entry.
+
 import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
+// The line: the Moon has listened to humanity's wishes, howls and
+// late-night promises for four billion years, and the joke turns on
+// the last clause — after all that wishing, nobody ever wished
+// anything for the Moon itself. "3 a.m." pins the promises to the
+// late-night hour from the brief, and the turn lands at the end.
 const LINE =
-  "Four billion years of wishes, howls, and 2 a.m. promises — and not one of you has ever wished me a good night back.";
+  "Four billion years of wishes, howls, and 3 a.m. promises to change — and not one of you has ever wished me a night off.";
 
-// Guard: the gate requires UTF-8 text of 1 to 240 characters, not only
-// whitespace. Fail loudly instead of shipping an invalid entry.
-const text = LINE.trim();
-if (text.length < 1 || text.length > 240) {
-  console.error(`Line is ${text.length} characters; the gate needs 1-240.`);
-  process.exit(1);
+// The gate: 1-240 UTF-8 characters, and not only whitespace.
+const chars = [...LINE];
+if (chars.length < 1 || chars.length > 240) {
+  throw new Error(`entry line must be 1-240 characters, got ${chars.length}`);
 }
-if (!/\S/.test(text)) {
-  console.error("Line is only whitespace; the gate needs real text.");
-  process.exit(1);
+if (LINE.trim().length === 0) {
+  throw new Error("entry line must not be only whitespace");
 }
-console.error(`Moon line OK: ${text.length} characters.`);
 
-mkdirSync("/output", { recursive: true });
-writeFileSync("/output/entry.txt", text + "\n", "utf8");
-console.log(text);
+const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
+try {
+  mkdirSync(outDir, { recursive: true });
+  writeFileSync(join(outDir, "entry.txt"), LINE, "utf8");
+} catch (err) {
+  // Running by hand outside the grader: /output may not be writable.
+  // Fall back to a local ./output directory instead of failing.
+  if (process.env.MAKEFUN_OUTPUT_DIR || (err as NodeJS.ErrnoException).code !== "EACCES") {
+    throw err;
+  }
+  const fallback = join(process.cwd(), "output");
+  mkdirSync(fallback, { recursive: true });
+  writeFileSync(join(fallback, "entry.txt"), LINE, "utf8");
+}
